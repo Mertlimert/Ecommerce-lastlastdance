@@ -1,0 +1,25 @@
+<nav>
+  <div class="nav-content">
+    <a routerLink="/">Ana Sayfa</a>
+    <div class="search-bar">
+      <input type="text" [(ngModel)]="searchQuery" placeholder="Ürün ara...">
+      <button (click)="onSearch()">Ara</button>
+    </div>
+    <div class="nav-links">
+      <a routerLink="/cart">Sepet ({{cartItemCount}})</a>
+      <ng-container *ngIf="!currentUser">
+        <a routerLink="/login">Giriş Yap</a>
+        <a routerLink="/register">Kayıt Ol</a>
+      </ng-container>
+      <ng-container *ngIf="currentUser">
+        <a routerLink="/profile">Profil</a>
+        <a *ngIf="isSeller()" routerLink="/seller">Satıcı Paneli</a>
+        <a *ngIf="isAdmin()" routerLink="/admin">Admin Paneli</a>
+        <button (click)="logout()">Çıkış Yap</button>
+      </ng-container>
+    </div>
+  </div>
+</nav>
+
+<app-alert></app-alert>
+<router-outlet></router-outlet> 
