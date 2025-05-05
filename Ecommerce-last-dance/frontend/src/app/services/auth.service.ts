@@ -142,6 +142,14 @@ export class AuthService {
     this.currentUserSubject.next(user);
   }
 
+  // Yeni metot: Subject'i güncellemek için
+  updateCurrentUser(user: User): void {
+    if (this.isBrowser) {
+      localStorage.setItem('currentUser', JSON.stringify(user));
+    }
+    this.currentUserSubject.next(user);
+  }
+
   isLoggedIn(): boolean {
     return !!this.currentUserSubject.value;
   }

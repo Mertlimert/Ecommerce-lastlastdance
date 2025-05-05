@@ -32,4 +32,7 @@ public class ProductRequestDto {
     
     @NotNull(message = "Kategori ID belirtilmelidir")
     private Long category_id;
+    
+    @NotNull(message = "Satıcı ID belirtilmelidir")
+    private Long seller_id;
 }

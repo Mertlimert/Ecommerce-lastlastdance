@@ -8,7 +8,7 @@ import { UserRole } from '../../models/user.model'; // Import UserRole enum
 @Component({
   selector: 'app-register',
   templateUrl: './register.component.html',
-  styleUrls: ['./register.component.scss'],
+  styleUrls: ['./register.component.css'],
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule, RouterLink]
 })
@@ -37,7 +37,7 @@ export class RegisterComponent {
   private passwordMatchValidator(form: FormGroup) {
     const password = form.get('password')?.value;
     const confirmPassword = form.get('confirmPassword')?.value;
-    
+
     return password === confirmPassword ? null : { passwordMismatch: true };
   }
 
@@ -54,7 +54,7 @@ export class RegisterComponent {
 
     this.isLoading = true;
     this.errorMessage = '';
-    
+
     // Remove confirmPassword before sending to API
     const userData = { ...this.registerForm.value };
     delete userData.confirmPassword;

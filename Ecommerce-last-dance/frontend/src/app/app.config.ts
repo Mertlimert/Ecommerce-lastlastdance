@@ -10,11 +10,11 @@ import { AuthService } from './services/auth.service';
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const authService = inject(AuthService);
   const token = authService.getAuthToken();
-  
+
   // Debug: Log the token and request information
   console.log(`Auth Interceptor URL: ${req.url}`);
   console.log(`Auth Interceptor Token present: ${!!token}`);
-  
+
   // Add token to headers if available
   if (token) {
     const authReq = req.clone({
@@ -23,7 +23,7 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
     console.log('Added Authorization header to request:', authReq.headers.has('Authorization'));
     return next(authReq);
   }
-  
+
   return next(req);
 };
 

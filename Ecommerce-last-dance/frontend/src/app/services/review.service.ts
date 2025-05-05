@@ -20,7 +20,7 @@ export class ReviewService {
   getProductReviews(productId: number): Observable<Review[]> {
     const url = `${this.apiUrl}/product/${productId}`;
     console.log(`Fetching reviews from: ${url}`);
-    
+
     return this.http.get<Review[]>(url)
       .pipe(
         catchError(error => {
@@ -31,7 +31,7 @@ export class ReviewService {
           }
           // Return empty array to prevent breaking the UI, but log the failure
           console.warn('Failed to fetch reviews. Returning empty array as fallback.');
-          return []; 
+          return [];
         })
       );
   }
@@ -59,7 +59,7 @@ export class ReviewService {
 
     console.log('Sending review data:', reviewData);
     console.log('User authenticated, token exists:', !!authToken);
-    
+
     // Use Angular's built-in HTTP interceptor instead of manual headers
     return this.http.post<Review>(this.apiUrl, reviewData).pipe(
       catchError(error => {
@@ -83,7 +83,7 @@ export class ReviewService {
       console.error('Missing authentication token');
       return throwError(() => new Error('Authentication token is missing. Please log in again.'));
     }
-    
+
     // Let the interceptor handle the Authorization header
     return this.http.put<Review>(`${this.apiUrl}/${review.id}`, review).pipe(
       catchError(error => {
@@ -107,16 +107,16 @@ export class ReviewService {
       console.error('Missing authentication token');
       return throwError(() => new Error('Authentication token is missing. Please log in again.'));
     }
-    
+
     // Add query parameters to indicate who is performing the deletion
     const params = new HttpParams()
       .set('userId', currentUserId.toString())
       .set('isAdmin', this.authService.isAdmin().toString());
-    
+
     console.log('Attempting to delete review:', reviewId);
     console.log('Current user ID:', currentUserId);
     console.log('Is admin:', this.authService.isAdmin());
-    
+
     // Include query parameters in the delete request
     return this.http.delete<void>(`${this.apiUrl}/${reviewId}`, { params }).pipe(
       catchError(error => {
@@ -131,7 +131,7 @@ export class ReviewService {
   private handleError(error: any): Observable<never> {
     console.error('Review service error:', error);
     let errorMessage = 'Something went wrong with the review operation';
-    
+
     if (error.error) {
       if (error.error.message) {
         errorMessage = error.error.message;
@@ -141,7 +141,7 @@ export class ReviewService {
     } else if (error.message) {
       errorMessage = error.message;
     }
-    
+
     return throwError(() => ({ message: errorMessage, originalError: error }));
   }
 }

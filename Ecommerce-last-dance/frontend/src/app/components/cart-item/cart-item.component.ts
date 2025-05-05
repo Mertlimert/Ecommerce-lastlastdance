@@ -5,7 +5,7 @@ import { CartItem } from '../../models/cart-item.model';
 @Component({
   selector: 'app-cart-item',
   templateUrl: './cart-item.component.html',
-  styleUrls: ['./cart-item.component.scss'],
+  styleUrls: ['./cart-item.component.css'],
   standalone: true,
   imports: [CommonModule]
 })
@@ -13,8 +13,20 @@ export class CartItemComponent {
   @Input() item!: CartItem;
   @Output() updateQuantity = new EventEmitter<number>();
   @Output() removeItem = new EventEmitter<void>();
+  @Output() stockExceeded = new EventEmitter<string>();
 
   incrementQuantity(): void {
+    if (!this.item.product) {
+      this.stockExceeded.emit('Ürün bilgisi bulunamadı.');
+      return;
+    }
+
+    if (this.item.quantity >= this.item.product.stock_quantity) {
+      this.stockExceeded.emit(`Stok sınırına ulaşıldı: Bu üründen en fazla ${this.item.product.stock_quantity} adet ekleyebilirsiniz.`);
+      return;
+    }
+
+    // Stok sınırını aşmadıysa miktarı artır
     this.updateQuantity.emit(this.item.quantity + 1);
   }
 

@@ -10,7 +10,7 @@ import { AlertService } from '../../services/alert.service'; // Import AlertServ
 @Component({
   selector: 'app-cart',
   templateUrl: './cart.component.html',
-  styleUrls: ['./cart.component.scss'],
+  styleUrls: ['./cart.component.css'],
   standalone: true,
   imports: [CommonModule, RouterLink, CartItemComponent]
 })
@@ -31,12 +31,12 @@ export class CartComponent implements OnInit {
     // First check authentication state
     this.authService.currentUser$.subscribe(user => {
       this.isLoggedIn = !!user;
-      
+
       if (this.isLoggedIn) {
         this.loadCartItems();
       }
     });
-    
+
     this.trackLoadingState();
   }
 
@@ -50,11 +50,15 @@ export class CartComponent implements OnInit {
     if (!this.isLoggedIn) {
       return;
     }
-    
+
     this.cartService.getCartItems().subscribe(items => {
       this.cartItems = items;
       this.totalPrice = this.cartService.getTotalPrice();
     });
+  }
+
+  handleStockExceeded(errorMessage: string): void {
+    this.alertService.error(errorMessage);
   }
 
   removeFromCart(productId: number | undefined): void {
@@ -84,7 +88,7 @@ export class CartComponent implements OnInit {
 
   updateQuantity(productId: number | undefined, quantity: number): void {
     if (!this.isLoggedIn) {
-      this.alertService.warn('Please log in to modify your cart.'); // Use AlertService
+      this.alertService.warn('Sepeti güncellemek için giriş yapmalısınız.');
       this.router.navigate(['/login']);
       return;
     }
@@ -92,17 +96,28 @@ export class CartComponent implements OnInit {
     if (productId !== undefined) {
       if (quantity > 0) {
         const itemToUpdate = this.cartItems.find(item => item.product.id === productId);
+
+        // Önce ürünün stok miktarını kontrol et
+        if (itemToUpdate && itemToUpdate.product && quantity > itemToUpdate.product.stock_quantity) {
+          const errorMessage = `Stok sınırı aşıldı: Bu üründen en fazla ${itemToUpdate.product.stock_quantity} adet ekleyebilirsiniz.`;
+          this.alertService.error(errorMessage);
+          return;
+        }
+
         this.cartService.updateQuantity(productId, quantity).subscribe({
           next: () => {
             // Cart updated successfully (handled by service)
             if (itemToUpdate) {
-              this.alertService.success(`Quantity for '${itemToUpdate.product.name}' updated to ${quantity}.`); // Use AlertService
+              this.alertService.success(`'${itemToUpdate.product.name}' ürününün miktarı ${quantity} olarak güncellendi.`);
             }
           },
           error: (error) => {
             console.error('Error updating quantity:', error);
-            const message = error?.error?.message || error?.message || 'Failed to update quantity. Please try again.';
-            this.alertService.error(message); // Use AlertService
+            const message = error?.error?.message || error?.message || 'Miktar güncellenirken hata oluştu. Lütfen tekrar deneyin.';
+            this.alertService.error(message);
+
+            // Hata durumunda güncel sepet durumunu tekrar yükle
+            this.loadCartItems();
           }
         });
       } else {
@@ -131,10 +146,10 @@ export class CartComponent implements OnInit {
       }
     });
   }
-  
+
   goToLogin(): void {
-    this.router.navigate(['/login'], { 
-      queryParams: { returnUrl: this.router.url } 
+    this.router.navigate(['/login'], {
+      queryParams: { returnUrl: this.router.url }
     });
   }
 }

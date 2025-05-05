@@ -33,6 +33,13 @@ public class UserService {
     public Optional<User> findById(Long id) {
         return userRepository.findById(id);
     }
+    
+    /**
+     * ID ile kullanıcıyı alır. ReviewController tarafından kullanılır.
+     */
+    public User getUserById(Long id) {
+        return userRepository.findById(id).orElse(null);
+    }
 
     /**
      * Kullanıcı adı ile kullanıcı bulma.

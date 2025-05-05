@@ -16,8 +16,8 @@ import { User } from '../../models/user.model';
   standalone: true,
   imports: [CommonModule, FormsModule, ReactiveFormsModule],
   templateUrl: './product-detail.component.html',
-  styleUrls: ['./product-detail.component.scss']
-})   
+  styleUrls: ['./product-detail.component.css']
+})
 export class ProductDetailComponent implements OnInit {
   @ViewChild('errorTemplate') errorTemplate!: TemplateRef<any>;
 
@@ -58,23 +58,34 @@ export class ProductDetailComponent implements OnInit {
     // Check login status first
     this.isLoggedIn = this.authService.isLoggedIn();
     this.currentUserId = this.authService.getCurrentUserId();
-    
+
     // Get the product ID from the route
     this.route.paramMap.subscribe(params => {
       const productId = Number(params.get('id'));
       if (!productId) {
-        this.error = 'Invalid product ID';
+        this.error = 'Geçersiz ürün ID';
         this.isLoading = false;
         return;
       }
-      
+
       this.loadProduct(productId);
     });
+
+    // Force form validation and touch to show errors if necessary
+    setTimeout(() => {
+      if (this.reviewForm) {
+        Object.keys(this.reviewForm.controls).forEach(key => {
+          const control = this.reviewForm.get(key);
+          control?.markAsTouched();
+        });
+        this.cdr.detectChanges();
+      }
+    }, 500);
   }
 
   loadProduct(productId: number): void {
     this.isLoading = true;
-    
+
     this.productService.getProduct(productId).subscribe({
       next: (product) => {
         this.product = product;
@@ -94,14 +105,14 @@ export class ProductDetailComponent implements OnInit {
       next: (reviews) => {
         this.reviews = reviews;
         this.isLoading = false;
-        
+
         // Check if the current user has already reviewed this product
         if (this.isLoggedIn && this.currentUserId) {
           const existingReview = this.reviews.find(r => r.userId === this.currentUserId);
           if (existingReview) {
             this.hasReviewed = true;
             this.userReview = existingReview;
-            
+
             // Update form with existing review data
             this.reviewForm.patchValue({
               rating: existingReview.rating,
@@ -109,7 +120,7 @@ export class ProductDetailComponent implements OnInit {
             });
           }
         }
-        
+
         // Manually trigger change detection after all updates
         this.cdr.detectChanges();
       },
@@ -123,17 +134,17 @@ export class ProductDetailComponent implements OnInit {
 
   submitReview(): void {
     if (!this.isLoggedIn) {
-      this.alertService.warn('Please log in to submit a review.');
+      this.alertService.warn('Yorum yapmak için lütfen giriş yapın.');
       return;
     }
 
     if (this.reviewForm.invalid) {
-      this.alertService.error('Please fill all required fields correctly.');
+      this.alertService.error('Lütfen tüm gerekli alanları doğru şekilde doldurun.');
       return;
     }
 
     if (!this.product?.id) {
-      this.alertService.error('Product information is missing.');
+      this.alertService.error('Ürün bilgisi eksik.');
       return;
     }
 
@@ -149,22 +160,22 @@ export class ProductDetailComponent implements OnInit {
       reviewData.id = this.userReview.id;
       this.reviewService.updateReview(reviewData).subscribe({
         next: (updatedReview) => {
-          this.alertService.success('Your review has been updated!');
+          this.alertService.success('Yorumunuz güncellendi!');
           this.loadReviews(this.product?.id as number);
         },
         error: (err) => {
-          this.alertService.error(err.message || 'Failed to update review');
+          this.alertService.error(err.message || 'Yorum güncellenirken bir hata oluştu');
         }
       });
     } else {
       // Add new review
       this.reviewService.addReview(reviewData).subscribe({
         next: (newReview) => {
-          this.alertService.success('Your review has been submitted!');
+          this.alertService.success('Yorumunuz gönderildi!');
           this.loadReviews(this.product?.id as number);
         },
         error: (err) => {
-          this.alertService.error(err.message || 'Failed to submit review');
+          this.alertService.error(err.message || 'Yorum gönderilirken bir hata oluştu');
         }
       });
     }
@@ -174,37 +185,37 @@ export class ProductDetailComponent implements OnInit {
     const reviewToDelete = this.reviews.find(review => review.userId === userId);
 
     if (!reviewToDelete?.id) {
-        this.alertService.warn('Review not found for the specified user.');
+        this.alertService.warn('Belirtilen kullanıcıya ait yorum bulunamadı.');
         return;
     }
 
     // Check if user has permission to delete this review
     const canDelete = this.authService.isAdmin() || userId === this.currentUserId;
-    
+
     if (!canDelete) {
-        this.alertService.error('You do not have permission to delete this review.');
+        this.alertService.error('Bu yorumu silme yetkiniz yok.');
         return;
     }
 
-    if (confirm('Are you sure you want to delete this review?')) {
+    if (confirm('Bu yorumu silmek istediğinizden emin misiniz?')) {
         this.reviewService.deleteReview(reviewToDelete.id).subscribe({
             next: () => {
-                this.alertService.success('The review has been deleted successfully.');
+                this.alertService.success('Yorum başarıyla silindi.');
                 // Update the reviews array to remove the deleted review
                 this.reviews = this.reviews.filter(review => review.id !== reviewToDelete.id);
-                
+
                 // If the deleted review was the current user's, reset the form
                 if (userId === this.currentUserId) {
                     this.hasReviewed = false;
                     this.userReview = null;
                     this.reviewForm.reset({rating: 5, comment: ''});
                 }
-                
+
                 this.cdr.detectChanges(); // Ensure UI updates
             },
             error: (err) => {
                 console.error('Delete review error:', err);
-                this.alertService.error(err.message || 'Failed to delete review. Please try again.');
+                this.alertService.error(err.message || 'Yorum silinirken bir hata oluştu. Lütfen tekrar deneyin.');
             }
         });
     }

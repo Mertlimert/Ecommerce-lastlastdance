@@ -30,7 +30,7 @@ import com.webapp.backend.exception.AuthException;
 import com.webapp.backend.exception.DuplicateResourceException;
 import com.webapp.backend.exception.ResourceNotFoundException;
 import com.webapp.backend.model.User;
-import com.webapp.backend.security.JwtUtils;
+import com.webapp.backend.security.JwtUtil;
 import com.webapp.backend.service.UserService;
 
 import jakarta.validation.Valid;
@@ -43,7 +43,7 @@ public class UserController {
     private final UserService userService;
     
     @Autowired
-    private JwtUtils jwtUtils;
+    private JwtUtil jwtUtils;
     
     @Autowired
     private AuthenticationManager authenticationManager;

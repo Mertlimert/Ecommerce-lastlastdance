@@ -10,7 +10,8 @@ export interface CartItem {
 
 export interface Cart {
   id?: number;
-  cartItems: CartItem[];
+  userId?: number;
+  items: CartItem[];
   createdAt?: string;
   updatedAt?: string;
   totalPrice?: number;

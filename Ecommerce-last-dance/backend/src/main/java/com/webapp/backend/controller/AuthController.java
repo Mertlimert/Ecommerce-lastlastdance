@@ -22,7 +22,7 @@ import com.webapp.backend.exception.AuthException;
 import com.webapp.backend.exception.DuplicateResourceException;
 import com.webapp.backend.exception.ResourceNotFoundException;
 import com.webapp.backend.model.User;
-import com.webapp.backend.security.JwtUtils;
+import com.webapp.backend.security.JwtUtil;
 import com.webapp.backend.security.UserDetailsImpl;
 import com.webapp.backend.service.UserService;
 
@@ -39,7 +39,7 @@ public class AuthController {
     UserService userService;
 
     @Autowired
-    JwtUtils jwtUtils;
+    JwtUtil jwtUtils;
 
     @PostMapping("/signin")
     public ResponseEntity<JwtResponseDto> authenticateUser(@Valid @RequestBody LoginDto loginDto) {

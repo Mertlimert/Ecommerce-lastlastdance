@@ -63,6 +63,15 @@ public class CartService {
             // Eğer miktar 0 veya daha azsa, ürünü sepetten kaldır
             cart.removeItem(productId);
         } else {
+            // Ürünü bul
+            Product product = productRepository.findById(productId)
+                    .orElseThrow(() -> new RuntimeException("Ürün bulunamadı"));
+            
+            // Stok kontrolü yap
+            if (product.getStock_quantity() < quantity) {
+                throw new RuntimeException("Yeterli stok yok");
+            }
+            
             // Aksi takdirde miktarı güncelle
             cart.updateItemQuantity(productId, quantity);
         }

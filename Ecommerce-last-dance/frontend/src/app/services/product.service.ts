@@ -11,7 +11,7 @@ import { AuthService } from './auth.service'; // Import AuthService
 })
 export class ProductService {
   private apiUrl = `http://localhost:8080/api`;
-  
+
   private mockProducts: Product[] = [
     {
       id: 1,
@@ -62,7 +62,7 @@ export class ProductService {
     if (!sellerId) {
       return throwError(() => new Error('User not authenticated'));
     }
-    
+
     // Use a dedicated endpoint for seller products or use query parameter
     return this.http.get<Product[]>(`${this.apiUrl}/products/seller`).pipe(
       catchError(error => {
@@ -77,6 +77,12 @@ export class ProductService {
   }
 
   createProduct(product: Product): Observable<Product> {
+    // Kullanıcıdan satıcı ID'sini al
+    const sellerId = this.authService.getCurrentUserId();
+    if (!sellerId) {
+      return throwError(() => new Error('Kullanıcı kimliği bulunamadı. Lütfen giriş yapın.'));
+    }
+
     // Make a copy of the product data to prevent issues with mutating the original
     const productData = {
       name: product.name,
@@ -85,13 +91,15 @@ export class ProductService {
       image_url: product.image_url || '',
       stock_quantity: Number(product.stock_quantity),
       // Ensure category_id is properly converted to a number or passed as null
-      category_id: product.category_id !== undefined && product.category_id !== null 
-        ? Number(product.category_id) 
-        : null
+      category_id: product.category_id !== undefined && product.category_id !== null
+        ? Number(product.category_id)
+        : null,
+      // Satıcı ID'sini ekliyoruz
+      seller_id: sellerId
     };
 
     console.log('Sending product data to server:', productData);
-    
+
     return this.http.post<Product>(`${this.apiUrl}/products`, productData).pipe(
       catchError((error) => {
         console.error('Error creating product:', error);
@@ -101,15 +109,21 @@ export class ProductService {
   }
 
   updateProduct(product: Product): Observable<Product> {
+    // Kullanıcıdan satıcı ID'sini al
+    const sellerId = this.authService.getCurrentUserId();
+    if (!sellerId) {
+      return throwError(() => new Error('Kullanıcı kimliği bulunamadı. Lütfen giriş yapın.'));
+    }
+
     const productData = {
       id: product.id,
       name: product.name,
       description: product.description,
-      price: product.price,
+      price: Number(product.price),
       image_url: product.image_url,
-      stock_quantity: product.stock_quantity,
-      category_id: product.category_id !== undefined ? Number(product.category_id) : null
-      // seller is managed by the backend based on ownership
+      stock_quantity: Number(product.stock_quantity),
+      category_id: product.category_id !== undefined ? Number(product.category_id) : null,
+      seller_id: sellerId // Satıcı ID'sini ekliyoruz
     };
 
     return this.http.put<Product>(`${this.apiUrl}/products/${product.id}`, productData).pipe(
@@ -140,7 +154,7 @@ export class ProductService {
   private handleError(error: any): Observable<never> {
     console.error('Product service error:', error);
     let errorMessage = 'Something went wrong';
-    
+
     if (error.error) {
       // Handle Spring Boot style errors
       if (error.error.message) {
@@ -153,7 +167,7 @@ export class ProductService {
     } else if (error.message) {
       errorMessage = error.message;
     }
-    
+
     return throwError(() => ({ message: errorMessage, originalError: error }));
   }
 }

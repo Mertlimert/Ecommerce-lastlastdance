@@ -120,6 +120,7 @@ public class Cart {
     public void updateItemQuantity(Long productId, int quantity) {
         CartItem item = findCartItem(productId);
         if (item != null) {
+            // Stok kontrolü burada yapılmıyor çünkü bu kontrol service katmanında yapılıyor
             item.setQuantity(quantity);
             this.updatedAt = LocalDateTime.now();
         }

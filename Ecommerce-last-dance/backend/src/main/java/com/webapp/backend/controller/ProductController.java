@@ -113,30 +113,42 @@ public class ProductController {
     }
 
     @PostMapping
-    public ResponseEntity<ProductResponseDto> createProduct(@Valid @RequestBody ProductRequestDto productDto, 
-                                           @RequestParam Long sellerId) {
-        // Kategori kontrolü
-        Category category = categoryService.findById(productDto.getCategory_id())
-                .orElseThrow(() -> new ResourceNotFoundException("Category", "id", productDto.getCategory_id()));
-
-        // Satıcı kontrolü
-        User seller = userService.findById(sellerId)
-                .orElseThrow(() -> new ResourceNotFoundException("Seller", "id", sellerId));
-
-        // DTO'dan entity'ye dönüştür
-        Product product = new Product();
-        product.setName(productDto.getName());
-        product.setDescription(productDto.getDescription());
-        product.setPrice(productDto.getPrice());
-        product.setImage_url(productDto.getImage_url());
-        product.setStock_quantity(productDto.getStock_quantity());
-        product.setCategory(category);
-        product.setSeller(seller);
-
-        Product savedProduct = productService.saveProduct(product);
-        ProductResponseDto responseDto = convertToDto(savedProduct);
-        
-        return ResponseEntity.status(HttpStatus.CREATED).body(responseDto);
+    public ResponseEntity<ProductResponseDto> createProduct(@Valid @RequestBody ProductRequestDto productDto) {
+        try {
+            // Debug için istek içeriğini logla
+            System.out.println("Gelen istek içeriği: " + productDto);
+            
+            if (productDto.getSeller_id() == null) {
+                throw new BadRequestException("Required parameter 'sellerId' is not present.");
+            }
+            
+            // Kategori kontrolü
+            Category category = categoryService.findById(productDto.getCategory_id())
+                    .orElseThrow(() -> new ResourceNotFoundException("Category", "id", productDto.getCategory_id()));
+    
+            // Satıcı kontrolü
+            User seller = userService.findById(productDto.getSeller_id())
+                    .orElseThrow(() -> new ResourceNotFoundException("Seller", "id", productDto.getSeller_id()));
+    
+            // DTO'dan entity'ye dönüştür
+            Product product = new Product();
+            product.setName(productDto.getName());
+            product.setDescription(productDto.getDescription());
+            product.setPrice(productDto.getPrice());
+            product.setImage_url(productDto.getImage_url());
+            product.setStock_quantity(productDto.getStock_quantity());
+            product.setCategory(category);
+            product.setSeller(seller);
+    
+            Product savedProduct = productService.saveProduct(product);
+            ProductResponseDto responseDto = convertToDto(savedProduct);
+            
+            return ResponseEntity.status(HttpStatus.CREATED).body(responseDto);
+        } catch (Exception e) {
+            // Hata detayını logla
+            e.printStackTrace();
+            throw e;
+        }
     }
 
     @PutMapping("/{id}")

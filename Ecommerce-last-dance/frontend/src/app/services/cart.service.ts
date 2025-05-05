@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
-import { BehaviorSubject, Observable, catchError, tap, throwError } from 'rxjs';
+import { BehaviorSubject, Observable, catchError, tap, throwError, of } from 'rxjs';
 import { CartItem, Cart } from '../models/cart-item.model';
 import { Product } from '../models/product.model';
 import { AuthService } from './auth.service';
@@ -16,7 +16,7 @@ export class CartService {
   private loadingSubject = new BehaviorSubject<boolean>(false);
 
   constructor(
-    private http: HttpClient, 
+    private http: HttpClient,
     private authService: AuthService,
     private router: Router
   ) {
@@ -47,16 +47,28 @@ export class CartService {
       return;
     }
 
+    // Kullanıcı ID'sini al
+    const userId = this.authService.getCurrentUserId();
+    if (!userId) {
+      console.error('User ID not found');
+      return;
+    }
+
     this.loadingSubject.next(true);
-    this.http.get<Cart>(this.apiUrl).pipe(
+
+    // URL'e kullanıcı ID'sini ekle
+    this.http.get<Cart>(`${this.apiUrl}/${userId}`).pipe(
       catchError(error => {
         console.error('Error loading cart:', error);
         this.handleAuthError(error);
-        return throwError(() => new Error('Failed to load cart. Please try again later.'));
+        // Hata durumunda boş sepet döndür
+        return of({ id: 0, userId: userId, items: [], totalPrice: 0 } as Cart);
       })
     ).subscribe({
       next: (cart) => {
-        this.cartItems = cart.cartItems || [];
+        console.log('Cart loaded:', cart);
+        // API yanıtında items alanı var
+        this.cartItems = cart.items || [];
         this.cartSubject.next([...this.cartItems]);
         this.loadingSubject.next(false);
       },
@@ -66,17 +78,39 @@ export class CartService {
     });
   }
 
+  // Ürünün sepette olup olmadığını ve mevcut miktarını kontrol et
+  private getCartItemQuantity(productId: number): number {
+    const existingItem = this.cartItems.find(item => item.product.id === productId);
+    return existingItem ? existingItem.quantity : 0;
+  }
+
   addToCart(product: Product, quantity: number = 1): Observable<Cart> {
     // Validate authentication first
     if (!this.authService.isLoggedIn()) {
       this.router.navigate(['/login'], { queryParams: { returnUrl: this.router.url } });
-      return throwError(() => new Error('Please log in to add items to your cart'));
+      return throwError(() => new Error('Ürün eklemek için giriş yapmalısınız'));
+    }
+
+    const userId = this.authService.getCurrentUserId();
+    if (!userId) {
+      return throwError(() => new Error('Kullanıcı ID bulunamadı'));
+    }
+
+    // Stok kontrolü yap
+    const currentQuantityInCart = this.getCartItemQuantity(product.id!);
+    const newTotalQuantity = currentQuantityInCart + quantity;
+
+    if (newTotalQuantity > product.stock_quantity) {
+      return throwError(() => new Error(`Yetersiz stok: Bu üründen en fazla ${product.stock_quantity} adet ekleyebilirsiniz. Sepetinizde zaten ${currentQuantityInCart} adet bulunuyor.`));
     }
 
     this.loadingSubject.next(true);
-    return this.http.post<Cart>(`${this.apiUrl}/items`, { productId: product.id, quantity }).pipe(
+    console.log(`Adding product to cart: POST ${this.apiUrl}/${userId}/product/${product.id}?quantity=${quantity}`);
+
+    return this.http.post<Cart>(`${this.apiUrl}/${userId}/product/${product.id}?quantity=${quantity}`, {}).pipe(
       tap(cart => {
-        this.cartItems = cart.cartItems || [];
+        console.log('Cart updated:', cart);
+        this.cartItems = cart.items || [];
         this.cartSubject.next([...this.cartItems]);
         this.loadingSubject.next(false);
       }),
@@ -84,33 +118,30 @@ export class CartService {
         this.loadingSubject.next(false);
         console.error('Error adding to cart:', error);
         this.handleAuthError(error);
-        return throwError(() => new Error(error.error?.error || 'Failed to add item to cart. Please try again.'));
-      })
-    );
-  }
-
-  removeFromCart(productId: number): Observable<Cart> {
-    this.loadingSubject.next(true);
-    return this.http.delete<Cart>(`${this.apiUrl}/items/${productId}`).pipe(
-      tap(cart => {
-        this.cartItems = cart.cartItems || [];
-        this.cartSubject.next([...this.cartItems]);
-        this.loadingSubject.next(false);
-      }),
-      catchError(error => {
-        this.loadingSubject.next(false);
-        console.error('Error removing from cart:', error);
-        this.handleAuthError(error);
-        return throwError(() => new Error('Failed to remove item from cart. Please try again.'));
+        return throwError(() => new Error(error.error?.detail || error.error?.message || 'Ürün sepete eklenemedi. Lütfen tekrar deneyin.'));
       })
     );
   }
 
   updateQuantity(productId: number, quantity: number): Observable<Cart> {
+    const userId = this.authService.getCurrentUserId();
+    if (!userId) {
+      return throwError(() => new Error('Kullanıcı ID bulunamadı'));
+    }
+
+    // Önce ürün bilgisini bulmaya çalış
+    const existingItem = this.cartItems.find(item => item.product.id === productId);
+    if (existingItem && existingItem.product) {
+      // Stok kontrolü yap
+      if (quantity > existingItem.product.stock_quantity) {
+        return throwError(() => new Error(`Stok sınırı aşıldı: Bu üründen en fazla ${existingItem.product.stock_quantity} adet ekleyebilirsiniz.`));
+      }
+    }
+
     this.loadingSubject.next(true);
-    return this.http.put<Cart>(`${this.apiUrl}/items/${productId}`, { quantity }).pipe(
+    return this.http.put<Cart>(`${this.apiUrl}/${userId}/product/${productId}?quantity=${quantity}`, {}).pipe(
       tap(cart => {
-        this.cartItems = cart.cartItems || [];
+        this.cartItems = cart.items || [];
         this.cartSubject.next([...this.cartItems]);
         this.loadingSubject.next(false);
       }),
@@ -118,14 +149,43 @@ export class CartService {
         this.loadingSubject.next(false);
         console.error('Error updating quantity:', error);
         this.handleAuthError(error);
-        return throwError(() => new Error(error.error?.error || 'Failed to update quantity. Please try again.'));
+
+        // Hata mesajını ilet
+        return throwError(() => new Error(error.error?.detail || error.error?.message || 'Miktar güncellenemedi. Stok sınırını aşmış olabilirsiniz.'));
+      })
+    );
+  }
+
+  removeFromCart(productId: number): Observable<Cart> {
+    const userId = this.authService.getCurrentUserId();
+    if (!userId) {
+      return throwError(() => new Error('Kullanıcı ID bulunamadı'));
+    }
+
+    this.loadingSubject.next(true);
+    return this.http.delete<Cart>(`${this.apiUrl}/${userId}/product/${productId}`).pipe(
+      tap(cart => {
+        this.cartItems = cart.items || [];
+        this.cartSubject.next([...this.cartItems]);
+        this.loadingSubject.next(false);
+      }),
+      catchError(error => {
+        this.loadingSubject.next(false);
+        console.error('Error removing from cart:', error);
+        this.handleAuthError(error);
+        return throwError(() => new Error('Ürün sepetten çıkarılamadı. Lütfen tekrar deneyin.'));
       })
     );
   }
 
   clearCart(): Observable<Cart> {
+    const userId = this.authService.getCurrentUserId();
+    if (!userId) {
+      return throwError(() => new Error('Kullanıcı ID bulunamadı'));
+    }
+
     this.loadingSubject.next(true);
-    return this.http.delete<Cart>(this.apiUrl).pipe(
+    return this.http.delete<Cart>(`${this.apiUrl}/${userId}/clear`).pipe(
       tap(cart => {
         this.cartItems = [];
         this.cartSubject.next([]);
@@ -135,14 +195,17 @@ export class CartService {
         this.loadingSubject.next(false);
         console.error('Error clearing cart:', error);
         this.handleAuthError(error);
-        return throwError(() => new Error('Failed to clear cart. Please try again.'));
+        return throwError(() => new Error('Sepet temizlenemedi. Lütfen tekrar deneyin.'));
       })
     );
   }
 
   getTotalPrice(): number {
     return this.cartItems.reduce((total, item) => {
-      return total + (item.product.price * item.quantity);
+      // subtotal undefined olabilir, güvenli erişim
+      const subtotal = item.subtotal || 0;
+      const price = item.product?.price || (item.quantity > 0 ? subtotal / item.quantity : 0);
+      return total + (price * item.quantity);
     }, 0);
   }
 
@@ -151,7 +214,7 @@ export class CartService {
       return total + item.quantity;
     }, 0);
   }
-  
+
   // Helper method to handle authentication errors
   private handleAuthError(error: HttpErrorResponse): void {
     if (error.status === 401 || error.status === 403) {

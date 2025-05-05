@@ -10,7 +10,7 @@ import { AlertService } from '../../services/alert.service';
 @Component({
   selector: 'app-product-list',
   templateUrl: './product-list.component.html',
-  styleUrls: ['./product-list.component.scss'],
+  styleUrls: ['./product-list.component.css'],
   standalone: true,
   imports: [CommonModule, RouterLink]
 })
@@ -68,10 +68,10 @@ export class ProductListComponent implements OnInit {
     if (event) {
       event.preventDefault();
     }
-    
+
     console.log('Selecting category:', category);
     this.selectedCategory = category;
-    
+
     if (category) {
       console.log('Fetching products for category:', category.id);
       this.productService.getProductsByCategory(category.id).subscribe({
@@ -93,7 +93,7 @@ export class ProductListComponent implements OnInit {
 
   filterProducts(searchQuery: string): void {
     const query = searchQuery.toLowerCase();
-    this.products = this.originalProducts.filter(product => 
+    this.products = this.originalProducts.filter(product =>
       product.name.toLowerCase().includes(query) ||
       (product.description?.toLowerCase().includes(query) ?? false)
     );

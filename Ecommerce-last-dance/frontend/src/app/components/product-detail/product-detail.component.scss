@@ -69,6 +69,9 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  background-color: #f8f9fa;
+  padding: 8px;
+  border-radius: 4px;
 }
 
 .review-user {
@@ -118,4 +121,21 @@ button.delete-review {
 
 button.delete-review:hover {
   background-color: #c0392b;
+}
+
+// Validation styles
+.validation-error, .form-error-message {
+  color: #e74c3c;
+  margin-top: 5px;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+// Review section translation
+.reviews-section h2 {
+  margin-top: 20px;
+  margin-bottom: 15px;
 }

@@ -4,15 +4,18 @@ import { CartComponent } from './components/cart/cart.component';
 import { LoginComponent } from './components/login/login.component';
 import { RegisterComponent } from './components/register/register.component';
 import { ProductDetailComponent } from './components/product-detail/product-detail.component';
+import { ProfileComponent } from './components/profile/profile.component';
 import { AdminGuard } from './guards/admin.guard';
 import { SellerGuard } from './guards/seller.guard';
+import { AuthGuard } from './guards/auth.guard';
 
 export const routes: Routes = [
   { path: '', component: ProductListComponent },
   { path: 'cart', component: CartComponent },
   { path: 'login', component: LoginComponent },
   { path: 'register', component: RegisterComponent },
-  { 
+  { path: 'profile', component: ProfileComponent, canActivate: [AuthGuard] },
+  {
     path: 'admin',
     loadChildren: () => import('./features/admin/admin.module').then(m => m.AdminModule),
     canActivate: [AdminGuard]
